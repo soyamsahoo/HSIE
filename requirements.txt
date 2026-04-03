@@ -1,0 +1,9 @@
+moderngl
+moderngl-window
+mediapipe
+opencv-python
+numpy
+pyrr
+Pillow
+pyglet
+pyglm
