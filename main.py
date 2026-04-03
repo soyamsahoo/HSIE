@@ -1,6 +1,7 @@
 import moderngl
 import moderngl_window as mglw
 import numpy as np
+from pyrr import Matrix44
 import time
 
 from renderer.camera import Camera
@@ -31,12 +32,22 @@ class HolographicEngine(mglw.WindowConfig):
         with open('renderer/hologram.frag', 'r') as f: frag_src = f.read()
         self.shader = ShaderProgram(self.ctx, vert_src, frag_src)
 
-        # Create Holographic Objects
+        # Create Holographic Objects (Complex nested rings for Iron Man look)
         self.objects = []
         for i in range(3):
-            rb = RigidBody(position=[(i-1)*2.5, 0.0, 0.0])
-            rb.mesh = create_ring(self.ctx, self.shader.program, 0.8, 1.0)
-            self.objects.append(rb)
+            group_pos = [(i-1)*3.0, 0.0, 0.0]
+
+            # Outer Ring
+            rb1 = RigidBody(position=group_pos)
+            rb1.mesh = create_ring(self.ctx, self.shader.program, 0.9, 1.0)
+            rb1.angular_velocity = np.array([0.0, 1.0, 0.0])
+            self.objects.append(rb1)
+
+            # Inner Ring (Rotated)
+            rb2 = RigidBody(position=group_pos)
+            rb2.mesh = create_ring(self.ctx, self.shader.program, 0.6, 0.7)
+            rb2.angular_velocity = np.array([1.0, 0.0, 0.0])
+            self.objects.append(rb2)
 
         # Hand Tracking
         self.hand_tracker = HandTracker()
@@ -96,13 +107,21 @@ class HolographicEngine(mglw.WindowConfig):
 
         for obj in self.objects:
             obj.update(frame_time)
+            # Update rotation from angular velocity
+            # (Simplification: just rotate around axis for demo)
             m_model = np.eye(4, dtype='f4')
             m_model[3, :3] = obj.position
+
+            # Add some automatic rotation
+            rot_y = Matrix44.from_y_rotation(time * obj.angular_velocity[1])
+            rot_x = Matrix44.from_x_rotation(time * obj.angular_velocity[0])
+            m_model = (Matrix44(m_model) * rot_y * rot_x).astype('f4')
+
             self.shader.program['m_model'].write(m_model.tobytes())
             obj.mesh.render()
 
         self.particles.render(mvp)
-        self.post_process.render()
+        self.post_process.render(time)
 
     def on_close(self):
         self.cam_thread.stop()
