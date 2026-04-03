@@ -1,4 +1,3 @@
-# Holographic Vertex Shader
 #version 330
 
 in vec3 in_position;

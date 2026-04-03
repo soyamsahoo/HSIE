@@ -1,4 +1,3 @@
-# Holographic Fragment Shader
 #version 330
 
 in vec3 v_normal;
